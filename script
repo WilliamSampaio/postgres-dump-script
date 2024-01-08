@@ -4,40 +4,40 @@ function docker_restore() {
     path_dump=$1
     encoding=$2
     path_log="${path_dump}.restore.log"
-    nome_container="pgsql_$(date +'%s')"
-    docker run --name $nome_container \
+    name_container="pgsql_$(date +'%s')"
+    docker run --name $name_container \
         -e POSTGRES_PASSWORD=pass \
         -e POSTGRES_INITDB_ARGS="--encoding=${encoding}" \
         -d postgres && \
-        docker cp $path_dump $nome_container:/dump_file && \
-        echo "Restaurando..." && \
+        docker cp $path_dump $name_container:/dump_file && \
+        echo "Restoring..." && \
         sleep 7 && \
-        docker exec -i -u postgres $nome_container \
+        docker exec -i -u postgres $name_container \
             pg_restore --dbname=postgres --verbose /dump_file &>> "${path_log}";
-    docker stop $nome_container && docker rm $nome_container;
-    echo -e "\nERROS:\n";
+    docker stop $name_container && docker rm $name_container;
+    echo -e "\nERRORS:\n";
     cat "${path_log}" | grep "error";
-    echo -e "\nLog do restore salvo em: $path_log \n";
+    echo -e "\nRestore log saved in: $path_log \n";
 }
 
 clear;
 
-# Carrega as variaveis do .env
+# Load vars from .env
 source "$(dirname "$0")/.env";
 
 echo "========================================";
 echo "HOST: $HOST";
 echo "PORT: $PORT";
-echo "USUÁRIO: $USER";
-# echo "SENHA: $PASSWORD";
-echo "BANCO: $DATABASE";
-echo "ESQUEMA: $SCHEMA";
+echo "USER: $USER";
+# echo "PASSWORD: $PASSWORD";
+echo "DATABASE: $DATABASE";
+echo "SCHEMA: $SCHEMA";
 echo "ENCODING: $ENCODING";
 echo "========================================";
 
 now=$(date +'%Y-%m-%d_%s');
 path="${HOME}/${DATABASE}_${SCHEMA}_backups";
-nome_arq="${DATABASE}_${SCHEMA}_${now}";
+name_arq="${DATABASE}_${SCHEMA}_${now}";
 
 if [ ! -d $path ]
 then
@@ -52,20 +52,17 @@ PGPASSWORD=$PASSWORD pg_dump \
     --encoding=$ENCODING \
     --no-tablespaces \
     --verbose \
-    $DATABASE > "${path}/${nome_arq}";
+    $DATABASE > "${path}/${name_arq}";
 
-# Compacta o dump em zip, caso o format seja plain
-# zip "${path}/${nome_arq}.zip" "${path}/${nome_arq}";
+# zip "${path}/${name_arq}.zip" "${path}/${name_arq}";
+# rm -f "${path}/${name_arq}";
 
-# Remove o dump caso e deixa somente o .zip
-# rm -f "${path}/${nome_arq}"
-
-echo -e "\nDump finalizado! Local: ${path}/${nome_arq}\n"
+echo -e "\nDump finished, dump saved in: ${path}/${name_arq}\n";
 
 while true; do
-    read -p "Restaurar dump com Docker para checar integridade? (y/N) " yn
+    read -p "Restore dump with Docker to check integrity? (y/N) " yn
     case $yn in
-        [Yy]* ) docker_restore "${path}/${nome_arq}" "$ENCODING"; break;;
+        [Yy]* ) docker_restore "${path}/${name_arq}" "$ENCODING"; break;;
         [Nn]* ) exit;;
         * ) exit;;
     esac
